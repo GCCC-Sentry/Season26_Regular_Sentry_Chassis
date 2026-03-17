@@ -1,0 +1,6 @@
+# === 全局通用规则 ===
+# 编译产物
+/build/
+*.bin
+
+User/thinking
