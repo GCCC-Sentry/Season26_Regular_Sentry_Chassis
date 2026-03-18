@@ -2,8 +2,8 @@
  * @Author: Nas(1319621819@qq.com)
  * @Date: 2025-11-03 00:07:24
  * @LastEditors: Nas(1319621819@qq.com)
- * @LastEditTime: 2026-03-14 14:17:24
- * @FilePath: \Regular_Sentry_Chassis\User\Software\Chassis.c
+ * @LastEditTime: 2026-03-18 22:24:51
+ * @FilePath: \Season26_Regular_Sentry_Chassis\User\Software\Chassis.c
  */
 
 /*
@@ -92,15 +92,15 @@ void Chassis_Init()
     PID_Set(&Chassis.forward_BL.chassis_speed_pid_forward_BL, 220.0f, 0, 0.3, 0.0f, CHASSISMOTOR_MAX_CURRENT/2, 1500);
     PID_Set(&Chassis.forward_BR.chassis_speed_pid_forward_BR, 220.0f, 0, 0.3, 0.0f, CHASSISMOTOR_MAX_CURRENT/2, 1500);
     /*PID舵向电机位置环初始化*/
-    PID_Set(&Chassis.turn_FL.chassis_location_pid_turn_FL,10.0f, 0.0f, 0.0f, 0.0f, CHASSISMOTOR_MAX_CURRENT, 1500);
-    PID_Set(&Chassis.turn_FR.chassis_location_pid_turn_FR,10.0f, 0.0f, 0.0f, 0.0f, CHASSISMOTOR_MAX_CURRENT, 1500);
-    PID_Set(&Chassis.turn_BL.chassis_location_pid_turn_BL,10.0f, 0.0f, 0.0f, 0.0f, CHASSISMOTOR_MAX_CURRENT, 1500);
-    PID_Set(&Chassis.turn_BR.chassis_location_pid_turn_BR,10.0f, 0.0f, 0.0f, 0.0f, CHASSISMOTOR_MAX_CURRENT, 1500);
+    PID_Set(&Chassis.turn_FL.chassis_location_pid_turn_FL,8.0f, 0.0f, 0.0f, 0.0f, CHASSISMOTOR_MAX_CURRENT, 1500);
+    PID_Set(&Chassis.turn_FR.chassis_location_pid_turn_FR,8.0f, 0.0f, 0.0f, 0.0f, CHASSISMOTOR_MAX_CURRENT, 1500);
+    PID_Set(&Chassis.turn_BL.chassis_location_pid_turn_BL,8.0f, 0.0f, 0.0f, 0.0f, CHASSISMOTOR_MAX_CURRENT, 1500);
+    PID_Set(&Chassis.turn_BR.chassis_location_pid_turn_BR,8.0f, 0.0f, 0.0f, 0.0f, CHASSISMOTOR_MAX_CURRENT, 1500);
     /*PID舵向电机速度环初始化*/
-    PID_Set(&Chassis.turn_FL.chassis_speed_pid_turn_FL,12.0f, 0.0f, 2.0f, 0.0f, CHASSISMOTOR_MAX_CURRENT, 1500);
-    PID_Set(&Chassis.turn_FR.chassis_speed_pid_turn_FR,12.0f, 0.0f, 2.0f, 0.0f, CHASSISMOTOR_MAX_CURRENT, 1500);
-    PID_Set(&Chassis.turn_BL.chassis_speed_pid_turn_BL,12.0f, 0.0f, 2.0f, 0.0f, CHASSISMOTOR_MAX_CURRENT, 1500);
-    PID_Set(&Chassis.turn_BR.chassis_speed_pid_turn_BR,12.0f, 0.0f, 2.0f, 0.0f, CHASSISMOTOR_MAX_CURRENT, 1500);
+    PID_Set(&Chassis.turn_FL.chassis_speed_pid_turn_FL,6.0f, 0.0f, 2.0f, 0.0f, CHASSISMOTOR_MAX_CURRENT, 1500);
+    PID_Set(&Chassis.turn_FR.chassis_speed_pid_turn_FR,6.0f, 0.0f, 2.0f, 0.0f, CHASSISMOTOR_MAX_CURRENT, 1500);
+    PID_Set(&Chassis.turn_BL.chassis_speed_pid_turn_BL,6.0f, 0.0f, 2.0f, 0.0f, CHASSISMOTOR_MAX_CURRENT, 1500);
+    PID_Set(&Chassis.turn_BR.chassis_speed_pid_turn_BR,6.0f, 0.0f, 2.0f, 0.0f, CHASSISMOTOR_MAX_CURRENT, 1500);
 
 
     /*底盘跟随PID*/
@@ -118,7 +118,6 @@ void Chassis_Init()
     /* 舵向电机参数初始化 */
     Chassis.turn_FL.now = 0;
     Chassis.turn_FL.set = X_AXIS_ECD_FL;
-
     Chassis.turn_FR.now = 0;
     Chassis.turn_FR.set = X_AXIS_ECD_FR;
 
