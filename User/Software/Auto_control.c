@@ -2,8 +2,8 @@
  * @Author: Nas(1319621819@qq.com)
  * @Date: 2025-11-03 00:07:24
  * @LastEditors: Nas(1319621819@qq.com)
- * @LastEditTime: 2026-03-16 19:30:29
- * @FilePath: \Regular_Sentry_Chassis\User\Software\Auto_control.c
+ * @LastEditTime: 2026-03-20 04:34:30
+ * @FilePath: \Season26_Regular_Sentry_Chassis\User\Software\Auto_control.c
  */
 
 #include "Auto_control.h"
@@ -250,11 +250,13 @@ void Send_to_Gimbal_2()
     uint16_to_bytes(Referee_data.projectile_allowance_17mm, &can_send_data[0]);
     uint16_to_bytes(game_robot_HP.ally_outpost_HP, &can_send_data[2]);
     uint16_to_bytes(game_robot_HP.ally_base_HP, &can_send_data[4]);
+    uint8_to_bytes(Referee_data.Launching_Frequency, &can_send_data[6]);
     Fdcanx_SendData(&hfdcan2, CAN_ID_REFEREE_DATA_2, can_send_data, 8);
 }
 void Send_to_Gimbal_3()
 {
     uint8_t can_send_data[8];
     float_to_bytes(rfid_status.rfid_status, &can_send_data[0]);
+    float_to_bytes(Referee_data.Initial_SPEED,&can_send_data[4]);
     Fdcanx_SendData(&hfdcan2, CAN_ID_REFEREE_DATA_3, can_send_data, 8);
 }

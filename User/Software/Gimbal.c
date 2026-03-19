@@ -2,7 +2,7 @@
  * @Author: Nas(1319621819@qq.com)
  * @Date: 2025-11-03 00:07:24
  * @LastEditors: Nas(1319621819@qq.com)
- * @LastEditTime: 2026-03-20 00:27:37
+ * @LastEditTime: 2026-03-20 01:06:45
  * @FilePath: \Season26_Regular_Sentry_Chassis\User\Software\Gimbal.c
  */
 /*
@@ -51,12 +51,12 @@ void Gimbal_Init()
     // 遥控
     PID_Set(&Gimbal.big_yaw.big_yaw_speed_pid, 200.0f, 0.0f, 0.0f, 0.0f, GIMBALMOTOR_MAX_CURRENT, 1000);
     //自瞄
-    PID_Set(&Gimbal.big_yaw.big_yaw_auto_speed_pid, 0.0f, 0.0f, 0.0f, 0.0f, GIMBALMOTOR_MAX_CURRENT, 1000);
+    PID_Set(&Gimbal.big_yaw.big_yaw_auto_speed_pid, 200.0f, 0.0f, 0.0f, 0.0f, GIMBALMOTOR_MAX_CURRENT, 1000);
     /*PID位置环初始化*/
     // 遥控
     PID_Set(&Gimbal.big_yaw.big_yaw_location_pid, 2.0f, 0.0f, 0.0f, 0.0f, GIMBALMOTOR_MAX_CURRENT, 100);
     //自瞄
-    PID_Set(&Gimbal.big_yaw.big_yaw_auto_location_pid, 0.0f, 0.0f, 0.0f, 0.0f, GIMBALMOTOR_MAX_CURRENT, 100);
+    PID_Set(&Gimbal.big_yaw.big_yaw_auto_location_pid, 2.0f, 0.0f, 0.0f, 0.0f, GIMBALMOTOR_MAX_CURRENT, 100);
     // 云台零点初始化
     DMMotor_SetZero(BIG_YAW_ZERO, BIGYAWMotor); 
     }
@@ -119,6 +119,17 @@ void Gimbal_Updater()
     {
         Gimbal.big_yaw.big_yaw_location_set = Gimbal.big_yaw.big_yaw_location_now;
     }
+    else if (Global.Chassis.mode == Navigation && Auto_data.is_scaning == 0)
+    {
+        // ===== 自瞄锁定：上板发的是编码器坐标系目标，直接转成IMU世界角 =====
+        // Global.Gimbal.input.yaw 现在 = relative_angle + encoder_relative（编码器系）
+        // 需要转换到IMU世界角：big_yaw_world = big_yaw_imu_now + (target_encoder - current_encoder)
+        float current_encoder = Chassis.relative_angle;  // 大yaw当前编码器位置
+        float target_encoder  = Global.Gimbal.input.yaw; // 上板发来的编码器坐标系目标
+        float delta_encoder   = target_encoder - current_encoder; // 还需要转过的角度
+
+        Gimbal.big_yaw.big_yaw_location_set = Gimbal.big_yaw.big_yaw_location_now + delta_encoder;
+    }
     else switch(Global.Chassis.mode)
     {
         case Navigation :
@@ -152,9 +163,9 @@ void Gimbal_Updater()
  */
 void Gimbal_Calculater()
 {
-    uint8_t navigation_use_location_ctrl = (Global.Chassis.mode == Navigation && Auto_data.is_scaning == 1);
+    uint8_t nav_auto_lock = (Global.Chassis.mode == Navigation && Auto_data.is_scaning == 0);
  
-    if ((Global.Auto.input.Auto_control_online <= 0 || Global.Auto.mode == NONE || Global.Auto.input.fire == -1) && Global.Gimbal.mode == NORMAL)
+    /* if ((Global.Auto.input.Auto_control_online <= 0 || Global.Auto.mode == NONE || Global.Auto.input.fire == -1) && Global.Gimbal.mode == NORMAL)
     {
         // 非自瞄
         switch(Global.Chassis.mode)
@@ -178,7 +189,7 @@ void Gimbal_Calculater()
             break; */
            /*  case FLOW_Chassis : */
                 
-                Gimbal.big_yaw.big_yaw_speed_set = 180.0f;
+                /* Gimbal.big_yaw.big_yaw_speed_set = 180.0f;
                 if(Chassis.is_aligning == 1)
                 {
                     Gimbal.big_yaw.big_yaw_speed_set = Gimbal.big_yaw.planning_speed;
@@ -191,6 +202,33 @@ void Gimbal_Calculater()
         Gimbal.big_yaw.current = PID_Cal(&Gimbal.big_yaw.big_yaw_speed_pid, Gimbal.big_yaw.big_yaw_speed_now, Gimbal.big_yaw.big_yaw_speed_set); 
         if (Global.Auto.input.Auto_control_online > 0)
         Global.Auto.input.Auto_control_online--;
+    }  */
+    if (nav_auto_lock)
+    {
+        // 导航 + 自瞄锁定：大yaw位置环追目标（目标在Updater中已设好）
+        Gimbal.big_yaw.big_yaw_speed_set = PID_Cal(&Gimbal.big_yaw.big_yaw_auto_location_pid, Gimbal.big_yaw.big_yaw_location_now, Gimbal.big_yaw.big_yaw_location_set);
+        Gimbal.big_yaw.current = PID_Cal(&Gimbal.big_yaw.big_yaw_auto_speed_pid, Gimbal.big_yaw.big_yaw_speed_now, Gimbal.big_yaw.big_yaw_speed_set);
+    }
+    else if ((Global.Auto.input.Auto_control_online <= 0 || Global.Auto.mode == NONE || Global.Auto.input.fire == -1) && Global.Gimbal.mode == NORMAL)
+    {
+        // 非自瞄（含导航扫描模式 is_scaning==1）
+        switch(Global.Chassis.mode)
+        {
+            case Navigation :
+                // is_scaning==1：速度控制（扫描匀速旋转由上板导航速度控制）
+            /* case FLOW_Chassis : */ 
+                Gimbal.big_yaw.big_yaw_speed_set = 180.0f;
+                if(Chassis.is_aligning == 1)
+                {
+                    Gimbal.big_yaw.big_yaw_speed_set = Gimbal.big_yaw.planning_speed;
+                }
+            break;
+            default :
+                Gimbal.big_yaw.big_yaw_speed_set = PID_Cal(&Gimbal.big_yaw.big_yaw_location_pid, Gimbal.big_yaw.big_yaw_location_now, Gimbal.big_yaw.big_yaw_location_set);
+        }
+        Gimbal.big_yaw.current = PID_Cal(&Gimbal.big_yaw.big_yaw_speed_pid, Gimbal.big_yaw.big_yaw_speed_now, Gimbal.big_yaw.big_yaw_speed_set); 
+        if (Global.Auto.input.Auto_control_online > 0)
+            Global.Auto.input.Auto_control_online--;
     }
     else
     { 
