@@ -2,8 +2,8 @@
  * @Author: Nas(1319621819@qq.com)
  * @Date: 2025-11-03 00:07:24
  * @LastEditors: Nas(1319621819@qq.com)
- * @LastEditTime: 2026-03-17 21:58:34
- * @FilePath: \Regular_Sentry_Chassis\User\Software\Gimbal.c
+ * @LastEditTime: 2026-03-20 00:27:37
+ * @FilePath: \Season26_Regular_Sentry_Chassis\User\Software\Gimbal.c
  */
 /*
   ****************************(C) COPYRIGHT 2026 ADAM****************************
@@ -122,7 +122,7 @@ void Gimbal_Updater()
     else switch(Global.Chassis.mode)
     {
         case Navigation :
-    /*         if (navigation_use_location_ctrl)
+            /* if (navigation_use_location_ctrl)
             {
                 Gimbal.big_yaw.big_yaw_location_set = Global.Gimbal.input.yaw + yaw_offset;
             }
@@ -130,8 +130,8 @@ void Gimbal_Updater()
             {
                 Gimbal.big_yaw.big_yaw_location_set = Gimbal.big_yaw.big_yaw_location_now;
             }
-            break; */
-        /* case FLOW_Chassis : */ 
+            break;
+        case FLOW_Chassis : */ 
             Gimbal.big_yaw.big_yaw_location_set = Gimbal.big_yaw.big_yaw_location_now;
             break;
         default :
@@ -160,7 +160,7 @@ void Gimbal_Calculater()
         switch(Global.Chassis.mode)
         {
             case Navigation :
-               /*  if (navigation_use_location_ctrl)
+                /* if (navigation_use_location_ctrl)
                 {
                     Gimbal.big_yaw.big_yaw_speed_set = 180.0f;
                     if(Chassis.is_aligning == 1)
@@ -176,7 +176,8 @@ void Gimbal_Calculater()
                     Gimbal.big_yaw.big_yaw_speed_set = PID_Cal(&Gimbal.big_yaw.big_yaw_location_pid, Gimbal.big_yaw.big_yaw_location_now, Gimbal.big_yaw.big_yaw_location_set);
                 }
             break; */
-            /* case FLOW_Chassis : */ 
+           /*  case FLOW_Chassis : */
+                
                 Gimbal.big_yaw.big_yaw_speed_set = 180.0f;
                 if(Chassis.is_aligning == 1)
                 {
@@ -205,7 +206,7 @@ void Gimbal_Calculater()
 
 /**
  * @brief          电流值设置
- * @param          none
+ * @param          none 
  * @retval         none
  */
 void Gimbal_Controller()
