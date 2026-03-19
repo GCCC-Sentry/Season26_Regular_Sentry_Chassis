@@ -131,7 +131,7 @@ void Gimbal_Updater()
                 Gimbal.big_yaw.big_yaw_location_set = Gimbal.big_yaw.big_yaw_location_now;
             }
             break; */
-        case FLOW_Chassis : 
+        /* case FLOW_Chassis : */ 
             Gimbal.big_yaw.big_yaw_location_set = Gimbal.big_yaw.big_yaw_location_now;
             break;
         default :
@@ -176,8 +176,8 @@ void Gimbal_Calculater()
                     Gimbal.big_yaw.big_yaw_speed_set = PID_Cal(&Gimbal.big_yaw.big_yaw_location_pid, Gimbal.big_yaw.big_yaw_location_now, Gimbal.big_yaw.big_yaw_location_set);
                 }
             break; */
-            case FLOW_Chassis : 
-                Gimbal.big_yaw.big_yaw_speed_set = 0.0f;
+            /* case FLOW_Chassis : */ 
+                Gimbal.big_yaw.big_yaw_speed_set = 180.0f;
                 if(Chassis.is_aligning == 1)
                 {
                     Gimbal.big_yaw.big_yaw_speed_set = Gimbal.big_yaw.planning_speed;
