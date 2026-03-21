@@ -2,7 +2,7 @@
  * @Author: Nas(1319621819@qq.com)
  * @Date: 2025-11-03 00:07:24
  * @LastEditors: Nas(1319621819@qq.com)
- * @LastEditTime: 2026-03-18 22:24:51
+ * @LastEditTime: 2026-03-20 15:46:22
  * @FilePath: \Season26_Regular_Sentry_Chassis\User\Software\Chassis.c
  */
 
@@ -47,6 +47,7 @@ int Last_Hp = 400;
 int Hp_Time_Wait = 0;
 uint32_t last_gimbal_msg_time;
 float X_speed, Y_speed, R_speed;
+pid_t chassis_power_pid; // 功率闭环控制pid
 /* 
 // 舵向电机速度滤波器，解决回零抖动
 static float steer_filter_buf[4] = {0};
@@ -65,6 +66,58 @@ static float steer_filter_buf[4] = {0};
     return *mem;
 }  */
 
+float power_limt(float FL_current, float FR_current, float BL_current, float BR_current,
+                 float FL_speed, float FR_speed, float BL_speed, float BR_speed, float max_p)
+{
+    float current[4] = {FL_current, FR_current, BL_current, BR_current};
+    float speed[4] = {FL_speed, FR_speed, BL_speed, BR_speed};
+    float now_p = 0.0f;
+
+    float a00 = 0.48872161;
+    float a01 = -2.93589057e-04;
+    float a10 = 5.3241338928e-05;
+    float a02 = 2.70936086e-07;
+    float a11 = 2.03985936e-06;
+    float a20 = 2.17417767e-07;
+    /*最大功率设置*/
+    Supercap_SetPower(max_p - 5.0f); //
+    cap.cache_energy = Referee_data.Buffer_Energy;
+    if ((cap.remain_vol <= 12) || (Global.Cap.mode == Not_FULL))
+    {
+        max_p -= 5.0f; // 2w余量
+        if (cap.remain_vol <= 10)
+            max_p -= 5.0f;
+        if (cap.remain_vol <= 8)
+            max_p -= 5.0f;
+    }
+    else if (cap.remain_vol > 12)
+    {
+        max_p += cap.remain_vol * 8; // 12
+    }
+    /*估算当前功率*/
+    for (int i = 0; i < 4; i++)
+    {
+        now_p += fabs(a00 + a01 * speed[1] + a10 * current[i] +
+                      a02 * speed[i] * speed[i] +
+                      a11 * speed[i] * current[i] +
+                      a20 * current[i] * current[i]);
+    }
+    float percentage = max_p / now_p;
+    if (cap.Chassis_power >= (max_p / 3.0f)) // 底盘当前功率过小不使用闭环
+        percentage += PID_Cal(&chassis_power_pid, cap.Chassis_power, max_p);
+    // if (Global.Chssis.input.y == 0 && Global.Chssis.input.x == 0)//急刹车
+    //     percentage = 1;
+    // if ((/*(-Global.Chssis.input.x > 0.5 && Vx_now < -25) || (-Global.Chssis.input.x < -0.5 && Vx_now > 25) ||*/
+    //     (Global.Chassis.input.y > 0.5 && Vy_now < -25) || (Global.Chassis.input.y < -0.5 && Vy_now > 25)&&Global.Chassis.mode == FLOW))
+    //     percentage = 1;
+
+    if (percentage < 0)
+        return 0.0f;
+    if (percentage > 1.0f) // 防止输出过大
+        return 1.0f;
+
+    return percentage;
+}
 /*-------------------- Init --------------------*/
 
 /**
@@ -106,7 +159,8 @@ void Chassis_Init()
     /*底盘跟随PID*/
     PID_Set(&Chassis.chassis_follow_pid, 20.0f, 0.0f, 0.1f, 0.0f, 200, 40);
     /*底盘功率控制pid*/
-
+    /*底盘功率控制pid*/
+    PID_Set(&chassis_power_pid, 0.04f, 0.0f, 0.01f,0, 0.09f, 0.09f);
 
     //底盘运动斜坡
 /*     RampGenerator_Init(&Chassis.Vx_ramp, CHASSIS_TASK_TIME, 40, 40, 2);
@@ -700,10 +754,25 @@ void Chassis_Controller()
     if (Global.Control.mode != 2)
     {
     /*电流设置*/
-    CHASSISMotor_set(Chassis.forward_FL.wheel_current_FL, WHEEL_MOVE_FL);
+/*     CHASSISMotor_set(Chassis.forward_FL.wheel_current_FL, WHEEL_MOVE_FL);
     CHASSISMotor_set(Chassis.forward_FR.wheel_current_FR, WHEEL_MOVE_FR);
     CHASSISMotor_set(Chassis.forward_BL.wheel_current_BL, WHEEL_MOVE_BL);
-    CHASSISMotor_set(Chassis.forward_BR.wheel_current_BR, WHEEL_MOVE_BR);
+    CHASSISMotor_set(Chassis.forward_BR.wheel_current_BR, WHEEL_MOVE_BR); */
+    float Plimit = 0.0f;
+    if (Referee_data.Chassis_Power_Limit == 0)
+        Plimit = 1.0f;
+    else
+        Plimit = power_limt(Chassis.forward_FL.wheel_current_FL, Chassis.forward_FR.wheel_current_FR, Chassis.forward_BL.wheel_current_BL, Chassis.forward_BR.wheel_current_BR,
+                            CHASSISMotor_get_data(WHEEL_MOVE_FL).speed_rpm,
+                            CHASSISMotor_get_data(WHEEL_MOVE_FR).speed_rpm,
+                            CHASSISMotor_get_data(WHEEL_MOVE_BL).speed_rpm,
+                            CHASSISMotor_get_data(WHEEL_MOVE_BR).speed_rpm,
+                            Referee_data.Chassis_Power_Limit);
+    /*电流设置*/
+    CHASSISMotor_set(Plimit * Chassis.forward_FL.wheel_current_FL, WHEEL_MOVE_FL);
+    CHASSISMotor_set(Plimit * Chassis.forward_FR.wheel_current_FR, WHEEL_MOVE_FR);
+    CHASSISMotor_set(Plimit * Chassis.forward_BL.wheel_current_BL, WHEEL_MOVE_BL);
+    CHASSISMotor_set(Plimit * Chassis.forward_BR.wheel_current_BR, WHEEL_MOVE_BR);
 
     CHASSISMotor_set(Chassis.turn_FL.current_steer_FL, WHEEL_TURN_FL);
     CHASSISMotor_set(Chassis.turn_FR.current_steer_FR, WHEEL_TURN_FR);

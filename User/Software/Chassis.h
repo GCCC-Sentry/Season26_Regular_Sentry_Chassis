@@ -2,8 +2,8 @@
  * @Author: Nas(1319621819@qq.com)
  * @Date: 2025-11-03 00:07:24
  * @LastEditors: Nas(1319621819@qq.com)
- * @LastEditTime: 2026-02-27 16:12:57
- * @FilePath: \Regular_Sentry_Chassis\User\Software\Chassis.h
+ * @LastEditTime: 2026-03-21 08:44:05
+ * @FilePath: \Season26_Regular_Sentry_Chassis\User\Software\Chassis.h
  */
 
 /*
@@ -44,7 +44,7 @@
 
 
 // 轮子向前时6020编码器的值
-#define X_AXIS_ECD_FL 1640                        
+#define X_AXIS_ECD_FL 7162                       
 #define X_AXIS_ECD_FR 2420
 #define X_AXIS_ECD_BL 1023
 #define X_AXIS_ECD_BR 3059
@@ -62,13 +62,13 @@
 #define WHEEL_K0 0.214f
 #define WHEEL_K1 0.132f
 #define WHEEL_K2 3.47f
-#define WHEEL_K3 7.8f   
+#define WHEEL_K3 7.3f   
 
 // 舵向电机 (GM6020)
 #define STEER_K0 0.741f
 #define STEER_K1 0.005f
 #define STEER_K2 12.98f
-#define STEER_K3 7.8f
+#define STEER_K3 7.3f
 
 /* 功率限制器结构体 */
 typedef struct

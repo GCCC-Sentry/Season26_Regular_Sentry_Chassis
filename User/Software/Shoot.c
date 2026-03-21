@@ -77,6 +77,17 @@ void Shoot_Updater()
 
 void Shoot_Calculater()
 {
+    if (Referee_data.Barrel_Heat < (Referee_data.Heat_Limit - 20)) // 180
+	{
+		if (Referee_data.Barrel_Heat < (Referee_data.Heat_Limit - 100)) // 100
+			Shoot.trigger_speed_set = Shoot.trigger_speed_set / 1.2f;
+		else if ((Referee_data.Barrel_Heat > (Referee_data.Heat_Limit - 100)) && (Referee_data.Barrel_Heat < (Referee_data.Heat_Limit - 90))) // 80--110
+			Shoot.trigger_speed_set = Shoot.trigger_speed_set / 2.0f;
+		else
+			Shoot.trigger_speed_set = Shoot.trigger_speed_set / 3.0f; // 150-180
+	}
+	else
+		Shoot.trigger_speed_set = TRIGGER_SPEED_CLOSE;
     // 1. 优先级最高：执行单发任务
     if (Shoot.single_shot_state == SINGLE_FIRING)
     {

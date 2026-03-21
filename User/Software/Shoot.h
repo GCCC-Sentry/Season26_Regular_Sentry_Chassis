@@ -1,8 +1,8 @@
 /*
  * @Date: 2025-10-27 21:03:17
  * @LastEditors: Nas(1319621819@qq.com)
- * @LastEditTime: 2026-03-13 04:31:18
- * @FilePath: \Regular_Sentry_Chassis\User\Software\Shoot.h
+ * @LastEditTime: 2026-03-20 14:07:08
+ * @FilePath: \Season26_Regular_Sentry_Chassis\User\Software\Shoot.h
  */
 
 #ifndef __SHOOT_H__
@@ -28,7 +28,7 @@ enum trigger_speed_e // 拨弹电机速度
     TRIGGER_SPEED_MID   = TRIGGER_SPEED_M,
     TRIGGER_SPEED_LOW   = TRIGGER_SPEED_L,
     TRIGGER_SPEED_DEBUG = 3000,
-    TRIGGER_SPEED_AIM_HIGH = 4800,
+    TRIGGER_SPEED_AIM_HIGH = 8640,
     TRIGGER_SPEED_AIM_MID = 2400,
     TRIGGER_SPEED_AIM_LOW = 1200,
 };
