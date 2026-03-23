@@ -2,8 +2,8 @@
  * @Author: Nas(1319621819@qq.com)
  * @Date: 2025-12-25 19:37:17
  * @LastEditors: Nas(1319621819@qq.com)
- * @LastEditTime: 2025-12-30 17:57:04
- * @FilePath: \Regular_Sentry_Chassis\User\Software\Gimbal.h
+ * @LastEditTime: 2026-03-24 04:19:25
+ * @FilePath: \Season26_Regular_Sentry_Chassis\User\Software\Gimbal.h
  */
 /*
   ****************************(C) COPYRIGHT 2026 ADAM****************************
@@ -91,7 +91,6 @@ void Gimbal_Init();
 void Gimbal_Tasks();
 void Gimbal_SetPitchAngle(float angle);
 void Gimbal_SetYawAngle(float angle);
-void relative_angle_big_yaw_send();
 
 extern Gimbal_t Gimbal;
 #endif 

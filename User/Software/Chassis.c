@@ -2,7 +2,7 @@
  * @Author: Nas(1319621819@qq.com)
  * @Date: 2025-11-03 00:07:24
  * @LastEditors: Nas(1319621819@qq.com)
- * @LastEditTime: 2026-03-20 15:46:22
+ * @LastEditTime: 2026-03-23 20:49:23
  * @FilePath: \Season26_Regular_Sentry_Chassis\User\Software\Chassis.c
  */
 
@@ -683,7 +683,7 @@ void Chassis_Updater()
  * @retval         none
  */
 
-void Chassis_Calculater(float vx,float vy,float vw)
+void Chassis_Calculator(float vx,float vy,float vw)
 {
     Nearby_Transposition();
 
@@ -828,7 +828,7 @@ void Chassis_Tasks(void)
     // 底盘数据更新
     Chassis_Updater();
     // 底盘运动解算
-    Chassis_Calculater(final_vx, final_vy, R_speed);
+    Chassis_Calculator(final_vx, final_vy, R_speed);
 /* --- 插入点：功率限制逻辑 --- */
     
 // A. 获取基础限制 (来自裁判系统)
@@ -906,60 +906,64 @@ void Chassis_SetAccel(float acc)
 {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
 
 }
+static void Receive_XY_Speed(uint8_t data[8])
+{
+    X_speed = -bytes_to_float(&data[0]);
+    Y_speed = -bytes_to_float(&data[4]);
+}
 
-void Receive_from_Gimbal_1(uint8_t data[8])
- {
- 
-	float speed_x = bytes_to_float(&data[0]);  
-	float speed_y = bytes_to_float(&data[4]);  
-/*     if(game_status.game_progress == 4)
-    { */
-        X_speed = -speed_x;
-		Y_speed = -speed_y;
-/*     }
-    else
-    {
-        X_speed = 0;
-        Y_speed = 0;
-    } */
-		
- }
- float speed_yaw;
- void Receive_from_Gimbal_2(uint8_t data[8])
- {
- 
-	float speed_w = bytes_to_float(&data[0]);  
-	speed_yaw = bytes_to_float(&data[4]);  
-		R_speed = speed_w;
-   Global.Gimbal.input.yaw = speed_yaw;		//单位 rad
- }
- void Receive_REFEREE_DATA(uint8_t data[8])
- {
-/*    chassis_power_limit = bytes_to_float(&data[0]);  */
- }
- void Receive_from_Gimbal_3(uint8_t data[8])
- {
-	Global.Control.mode = bytes_to_float(&data[0]);
-    Global.Chassis.mode =  bytes_to_float(&data[4]);  
- }
- void Receive_from_Gimbal_4(uint8_t data[8])
- {
-    float pitch = bytes_to_float(&data[0]);
-    float yaw_cnt = bytes_to_float(&data[4]);
-    imu.pitch = pitch;
-    imu.yaw_cnt = yaw_cnt;
- }
-void Receive_from_Gimbal_5(uint8_t data[8])
- {
-    float gyro0 = bytes_to_float(&data[0]);
-    float gyro2 = bytes_to_float(&data[4]);
-    imu.gyro[0] = gyro0;
-    imu.gyro[2] = gyro2;
- }
-void Receive_from_Gimbal_7(uint8_t data[8])
+static float speed_yaw;
+static void Receive_R_Yaw(uint8_t data[8])
+{
+    R_speed = bytes_to_float(&data[0]);
+    speed_yaw = bytes_to_float(&data[4]);
+    Global.Gimbal.input.yaw = speed_yaw; // 单位 rad
+}
+
+static void Receive_Control_Mode(uint8_t data[8])
+{
+    Global.Control.mode = bytes_to_float(&data[0]);
+    Global.Chassis.mode = bytes_to_float(&data[4]);
+}
+
+static void Receive_IMU_Attitude(uint8_t data[8])
+{
+    imu.pitch   = bytes_to_float(&data[0]);
+    imu.yaw_cnt = bytes_to_float(&data[4]);
+}
+
+static void Receive_IMU_Gyro(uint8_t data[8])
+{
+    imu.gyro[0] = bytes_to_float(&data[0]);
+    imu.gyro[2] = bytes_to_float(&data[4]);
+}
+
+static void Receive_Saltation_Mode(uint8_t data[8])
 {
     Gimbal.big_yaw.planning_speed = bytes_to_float(&data[0]);
-    Chassis.is_aligning = bytes_to_uint8(&data[4]);
-    fromMINIPC.mode =  bytes_to_uint8(&data[5]);
-    Auto_data.is_scaning = bytes_to_uint8(&data[6]);
+    Chassis.is_aligning           = bytes_to_uint8(&data[4]);
+    fromMINIPC.mode               = bytes_to_uint8(&data[5]);
+    Auto_data.is_scaning          = bytes_to_uint8(&data[6]);
+}
+
+extern void Receive_TRIGGER_MODE(uint8_t data[8]);
+
+static const CanRxEntry_t s_chassis_rx_table[] = {
+    { CAN_ID_CHASSIS_SPEED_XY,     Receive_XY_Speed       },
+    { CAN_ID_CHASSIS_SPEED_R_YAW,  Receive_R_Yaw          },
+    { CAN_ID_CHASSIS_MODE,         Receive_Control_Mode   },
+    { CAN_ID_CHASSIS_IMU_ATTITUDE, Receive_IMU_Attitude   },
+    { CAN_ID_CHASSIS_IMU_GYRO,     Receive_IMU_Gyro       },
+    { CAN_ID_SHOOT_TRIGGER_MODE,   Receive_TRIGGER_MODE   },
+    { CAN_ID_SALTATION_MODE,       Receive_Saltation_Mode },
+};
+
+void Chassis_CAN_Dispatch(uint16_t id, uint8_t data[8])
+{
+    for (uint8_t i = 0; i < sizeof(s_chassis_rx_table)/sizeof(s_chassis_rx_table[0]); i++) {
+        if (s_chassis_rx_table[i].id == id) {
+            s_chassis_rx_table[i].handler(data);
+            return;
+        }
+    }
 }

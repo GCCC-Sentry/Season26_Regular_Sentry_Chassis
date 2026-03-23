@@ -1,8 +1,8 @@
 /*
  * @Date: 2025-08-31 21:36:57
  * @LastEditors: Nas(1319621819@qq.com)
- * @LastEditTime: 2026-03-13 03:26:21
- * @FilePath: \Regular_Sentry_Chassis\User\Software\Auto_control.h
+ * @LastEditTime: 2026-03-24 04:16:18
+ * @FilePath: \Season26_Regular_Sentry_Chassis\User\Software\Auto_control.h
  */
 #ifndef __AUTO_CONTROL_H__
 #define __AUTO_CONTROL_H__
@@ -241,9 +241,6 @@ void Auto_Control();
 void MINIPC_to_STM32();
 void decodeNAVdata(Navigation_data_t *target, unsigned char buff[], unsigned int len);
 void Decision_Transmission(Sentry_cmd_t *sentry_cmd_info, uint8_t *tx_buffer);
-void Send_to_Gimbal_1();
-void Send_to_Gimbal_2();
-void Send_to_Gimbal_3();
 extern MINIPC_data_t fromMINIPC;
 extern STM32_data_t toMINIPC;;
 extern Navigation_data_t Navigation_receive_1;

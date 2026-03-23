@@ -2,8 +2,8 @@
  * @Author: hao hao@qlu.edu.cn
  * @Date: 2025-08-31 21:36:57
  * @LastEditors: Nas(1319621819@qq.com)
- * @LastEditTime: 2026-02-25 19:14:47
- * @FilePath: \Regular_Sentry_Chassis\User\BSP\CAN_receive_send.h
+ * @LastEditTime: 2026-03-23 20:32:16
+ * @FilePath: \Season26_Regular_Sentry_Chassis\User\BSP\CAN_receive_send.h
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
 #ifndef __CAN_RECEIVE_SEND_H__
@@ -38,6 +38,14 @@ extern void HAL_FDCAN_ErrorCallback(FDCAN_HandleTypeDef *hfdcan);
 #define CAN_ID_REFEREE_DATA_2        0x10A
 #define CAN_ID_REFEREE_DATA_3        0x10B
 #define CAN_ID_SALTATION_MODE        0x10C
+
+/* CAN 接收路由表类型 */
+typedef void (*CanRxHandler_t)(uint8_t data[8]);
+typedef struct {
+    uint16_t       id;
+    CanRxHandler_t handler;
+} CanRxEntry_t;
+
 #endif /* __CAN_RECEIVE_SEND_H__ */
 
 

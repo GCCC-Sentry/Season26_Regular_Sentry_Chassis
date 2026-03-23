@@ -75,7 +75,7 @@ void Shoot_Updater()
     }
 }
 
-void Shoot_Calculater()
+void Shoot_Calculator()
 {
     if (Referee_data.Barrel_Heat < (Referee_data.Heat_Limit - 20)) // 180
 	{
@@ -172,12 +172,12 @@ void Shoot_Tasks(void)
 {
 #if (USE_SHOOT != 0)
     Shoot_Updater();
-    Shoot_Calculater();
+    Shoot_Calculator();
     Shoot_Controller();
 #endif
 }
 
-void Receive_from_Gimbal_6(uint8_t data[8])
+void Receive_TRIGGER_MODE(uint8_t data[8])
 {
     Global.Shoot.tigger_mode = bytes_to_float(&data[0]);
 }

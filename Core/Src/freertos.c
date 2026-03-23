@@ -1,8 +1,8 @@
 /*
  * @Date: 2025-10-24 19:37:34
  * @LastEditors: Nas(1319621819@qq.com)
- * @LastEditTime: 2026-03-16 19:06:23
- * @FilePath: \Regular_Sentry_Chassis\Core\Src\freertos.c
+ * @LastEditTime: 2026-03-24 04:14:16
+ * @FilePath: \Season26_Regular_Sentry_Chassis\Core\Src\freertos.c
  */
 /* USER CODE BEGIN Header */
 /**
@@ -252,10 +252,7 @@ void Gimbal_Task(void *argument)
   for(;;)
   {
     Gimbal_Tasks();
-    relative_angle_big_yaw_send();
-    Send_to_Gimbal_1();
-    Send_to_Gimbal_2();
-    Send_to_Gimbal_3();
+    Gimbal_CAN_SendAll();
     osDelay(1);
   }
   /* USER CODE END Gimbal_Task */

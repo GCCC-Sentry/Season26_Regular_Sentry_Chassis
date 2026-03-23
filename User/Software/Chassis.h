@@ -2,7 +2,7 @@
  * @Author: Nas(1319621819@qq.com)
  * @Date: 2025-11-03 00:07:24
  * @LastEditors: Nas(1319621819@qq.com)
- * @LastEditTime: 2026-03-21 08:44:05
+ * @LastEditTime: 2026-03-24 04:18:46
  * @FilePath: \Season26_Regular_Sentry_Chassis\User\Software\Chassis.h
  */
 
@@ -215,17 +215,12 @@ void Chassis_SetR(float r);
 void Chassis_SetAccel(float acc);
 void Rudder_Angle_Calculation(float x, float y, float w);
 void Nearby_Transposition();
-void Chassis_Calculater(float vx,float vy,float vw);
+void Chassis_Calculator(float vx,float vy,float vw);
 float Random_Spin(float min, float max);
 float Generate_Random_Float(float min, float max);
-void Chassis_PowerLimit_Update(float max_power);
-void Receive_from_Gimbal_1(uint8_t data[8]);
-void Receive_from_Gimbal_2(uint8_t data[8]);
-void Receive_REFEREE_DATA(uint8_t data[8]);
-void Receive_from_Gimbal_3(uint8_t data[8]);
-void Receive_from_Gimbal_4(uint8_t data[8]);
-void Receive_from_Gimbal_5(uint8_t data[8]);
-void Receive_from_Gimbal_7(uint8_t data[8]);
+/* void Chassis_PowerLimit_Update(float max_power); */
+void Chassis_CAN_Dispatch(uint16_t id, uint8_t data[8]);
+
 #define CHASSIS_TASK_TIME 1 // 底盘任务刷新间隔
 
 #endif

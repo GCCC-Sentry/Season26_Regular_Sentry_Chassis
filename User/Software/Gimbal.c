@@ -2,7 +2,7 @@
  * @Author: Nas(1319621819@qq.com)
  * @Date: 2025-11-03 00:07:24
  * @LastEditors: Nas(1319621819@qq.com)
- * @LastEditTime: 2026-03-20 01:06:45
+ * @LastEditTime: 2026-03-24 04:19:11
  * @FilePath: \Season26_Regular_Sentry_Chassis\User\Software\Gimbal.c
  */
 /*
@@ -133,16 +133,7 @@ void Gimbal_Updater()
     else switch(Global.Chassis.mode)
     {
         case Navigation :
-            /* if (navigation_use_location_ctrl)
-            {
-                Gimbal.big_yaw.big_yaw_location_set = Global.Gimbal.input.yaw + yaw_offset;
-            }
-            else
-            {
-                Gimbal.big_yaw.big_yaw_location_set = Gimbal.big_yaw.big_yaw_location_now;
-            }
-            break;
-        case FLOW_Chassis : */ 
+        /* case FLOW_Chassis :  */
             Gimbal.big_yaw.big_yaw_location_set = Gimbal.big_yaw.big_yaw_location_now;
             break;
         default :
@@ -161,48 +152,9 @@ void Gimbal_Updater()
  * @param          none
  * @retval         none
  */
-void Gimbal_Calculater()
+void Gimbal_Calculator()
 {
     uint8_t nav_auto_lock = (Global.Chassis.mode == Navigation && Auto_data.is_scaning == 0);
- 
-    /* if ((Global.Auto.input.Auto_control_online <= 0 || Global.Auto.mode == NONE || Global.Auto.input.fire == -1) && Global.Gimbal.mode == NORMAL)
-    {
-        // 非自瞄
-        switch(Global.Chassis.mode)
-        {
-            case Navigation :
-                /* if (navigation_use_location_ctrl)
-                {
-                    Gimbal.big_yaw.big_yaw_speed_set = 180.0f;
-                    if(Chassis.is_aligning == 1)
-                    {
-                        Gimbal.big_yaw.big_yaw_speed_set = Gimbal.big_yaw.planning_speed;
-                    }
-                    // location_set 已在 Gimbal_Updater 中同步到当前位置
-                    // 不再覆写 Global.Gimbal.input.yaw，保持 CAN 原始值
-                   
-                }
-                else
-                {
-                    Gimbal.big_yaw.big_yaw_speed_set = PID_Cal(&Gimbal.big_yaw.big_yaw_location_pid, Gimbal.big_yaw.big_yaw_location_now, Gimbal.big_yaw.big_yaw_location_set);
-                }
-            break; */
-           /*  case FLOW_Chassis : */
-                
-                /* Gimbal.big_yaw.big_yaw_speed_set = 180.0f;
-                if(Chassis.is_aligning == 1)
-                {
-                    Gimbal.big_yaw.big_yaw_speed_set = Gimbal.big_yaw.planning_speed;
-                }
-            break;
-            default :
-                Gimbal.big_yaw.big_yaw_speed_set =  PID_Cal(&Gimbal.big_yaw.big_yaw_location_pid, Gimbal.big_yaw.big_yaw_location_now,Gimbal.big_yaw.big_yaw_location_set);
-        
-        }
-        Gimbal.big_yaw.current = PID_Cal(&Gimbal.big_yaw.big_yaw_speed_pid, Gimbal.big_yaw.big_yaw_speed_now, Gimbal.big_yaw.big_yaw_speed_set); 
-        if (Global.Auto.input.Auto_control_online > 0)
-        Global.Auto.input.Auto_control_online--;
-    }  */
     if (nav_auto_lock)
     {
         // 导航 + 自瞄锁定：大yaw位置环追目标（目标在Updater中已设好）
@@ -271,17 +223,6 @@ void Gimbal_Controller()
 }
 
 
-/************************* Send *************************/ 
-void relative_angle_big_yaw_send()
-{
-    uint8_t can_send_data[8]; // 发送缓冲区
-    Chassis.relative_angle = DMMotor_GetData(BIGYAWMotor).motor_data.para.angle_cnt - BIG_YAW_ZERO ;
-    // Byte 0-3: 相对角度
-    float_to_bytes(Chassis.relative_angle, &can_send_data[0]);
-    Fdcanx_SendData(&hfdcan2, CAN_ID_GIMBAL_RELATIVE_ANGLE, can_send_data, 8);
-
-}
-
 /*-------------------- Task --------------------*/
 
 /**
@@ -295,7 +236,7 @@ void Gimbal_Tasks(void)
 	// 云台数据更新
 	Gimbal_Updater();
     // 云台控制解算
-    Gimbal_Calculater();
+    Gimbal_Calculator();
 	// 云台电机控制
 	Gimbal_Controller();
 #endif

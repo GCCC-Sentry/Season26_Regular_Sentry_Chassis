@@ -2,13 +2,14 @@
  * @Author: Nas(1319621819@qq.com)
  * @Date: 2025-11-03 00:07:24
  * @LastEditors: Nas(1319621819@qq.com)
- * @LastEditTime: 2026-03-20 04:34:30
+ * @LastEditTime: 2026-03-24 04:05:10
  * @FilePath: \Season26_Regular_Sentry_Chassis\User\Software\Auto_control.c
  */
 
 #include "Auto_control.h"
 #include "Global_status.h"
 #include "Gimbal.h"
+#include "Chassis.h"
 
 #include "IMU_updata.h"
 #include "dm_imu.h"
@@ -234,29 +235,55 @@ void Auto_Control()
 
 }
 
-void Send_to_Gimbal_1()
+// 只填充 data，不发送，不声明自己的 buffer
+static void Pack_RefereeData1(uint8_t data[8])
 {
-    uint8_t can_send_data[8];
-    uint16_to_bytes(robot_status.current_HP, &can_send_data[0]);
-    uint16_to_bytes(robot_status.maximum_HP, &can_send_data[2]);
-    uint8_to_bytes(game_status.game_type, &can_send_data[4]);
-    uint8_to_bytes(game_status.game_progress, &can_send_data[5]);
-    uint16_to_bytes(game_status.stage_remain_time, &can_send_data[6]);
-    Fdcanx_SendData(&hfdcan2, CAN_ID_REFEREE_DATA_1, can_send_data, 8);
+    uint16_to_bytes(robot_status.current_HP,         &data[0]);
+    uint16_to_bytes(robot_status.maximum_HP,         &data[2]);
+    uint8_to_bytes (game_status.game_type,           &data[4]);
+    uint8_to_bytes (game_status.game_progress,       &data[5]);
+    uint16_to_bytes(game_status.stage_remain_time,   &data[6]);
 }
-void Send_to_Gimbal_2()
+
+static void Pack_RefereeData2(uint8_t data[8])
 {
-    uint8_t can_send_data[8];
-    uint16_to_bytes(Referee_data.projectile_allowance_17mm, &can_send_data[0]);
-    uint16_to_bytes(game_robot_HP.ally_outpost_HP, &can_send_data[2]);
-    uint16_to_bytes(game_robot_HP.ally_base_HP, &can_send_data[4]);
-    uint8_to_bytes(Referee_data.Launching_Frequency, &can_send_data[6]);
-    Fdcanx_SendData(&hfdcan2, CAN_ID_REFEREE_DATA_2, can_send_data, 8);
+    uint16_to_bytes(Referee_data.projectile_allowance_17mm, &data[0]);
+    uint16_to_bytes(game_robot_HP.ally_outpost_HP,          &data[2]);
+    uint16_to_bytes(game_robot_HP.ally_base_HP,             &data[4]);
+    uint8_to_bytes (Referee_data.Launching_Frequency,       &data[6]);
 }
-void Send_to_Gimbal_3()
+
+static void Pack_RefereeData3(uint8_t data[8])
 {
-    uint8_t can_send_data[8];
-    float_to_bytes(rfid_status.rfid_status, &can_send_data[0]);
-    float_to_bytes(Referee_data.Initial_SPEED,&can_send_data[4]);
-    Fdcanx_SendData(&hfdcan2, CAN_ID_REFEREE_DATA_3, can_send_data, 8);
+    float_to_bytes(rfid_status.rfid_status,    &data[0]);
+    float_to_bytes(Referee_data.Initial_SPEED, &data[4]);
+}
+
+static void Pack_RelativeAngle(uint8_t data[8])
+{
+    Chassis.relative_angle = DMMotor_GetData(BIGYAWMotor).motor_data.para.angle_cnt - BIG_YAW_ZERO;
+    float_to_bytes(Chassis.relative_angle, &data[0]);
+}
+
+typedef void (*CanTxPack_t)(uint8_t data[8]);
+typedef struct {
+    FDCAN_HandleTypeDef *hfdcan;
+    uint16_t             id;
+    CanTxPack_t          pack;
+} CanTxEntry_t;
+
+static const CanTxEntry_t s_gimbal_tx_table[] = {
+    { &hfdcan2, CAN_ID_GIMBAL_RELATIVE_ANGLE, Pack_RelativeAngle },
+    { &hfdcan2, CAN_ID_REFEREE_DATA_1,        Pack_RefereeData1  },
+    { &hfdcan2, CAN_ID_REFEREE_DATA_2,        Pack_RefereeData2  },
+    { &hfdcan2, CAN_ID_REFEREE_DATA_3,        Pack_RefereeData3  },
+};
+
+void Gimbal_CAN_SendAll(void)
+{
+    uint8_t buf[8];  // 整个发送循环共享一个 buffer，只占一次栈空间
+    for (uint8_t i = 0; i < sizeof(s_gimbal_tx_table)/sizeof(s_gimbal_tx_table[0]); i++) {
+        s_gimbal_tx_table[i].pack(buf);
+        Fdcanx_SendData(s_gimbal_tx_table[i].hfdcan, s_gimbal_tx_table[i].id, buf, 8);
+    }
 }
