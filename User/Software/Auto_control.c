@@ -2,7 +2,7 @@
  * @Author: Nas(1319621819@qq.com)
  * @Date: 2025-11-03 00:07:24
  * @LastEditors: Nas(1319621819@qq.com)
- * @LastEditTime: 2026-03-24 04:05:10
+ * @LastEditTime: 2026-03-24 15:26:58
  * @FilePath: \Season26_Regular_Sentry_Chassis\User\Software\Auto_control.c
  */
 
@@ -257,33 +257,25 @@ static void Pack_RefereeData3(uint8_t data[8])
 {
     float_to_bytes(rfid_status.rfid_status,    &data[0]);
     float_to_bytes(Referee_data.Initial_SPEED, &data[4]);
-}
+} 
 
-static void Pack_RelativeAngle(uint8_t data[8])
+static void Receive_TRIGGER_MODE(uint8_t data[8])
 {
-    Chassis.relative_angle = DMMotor_GetData(BIGYAWMotor).motor_data.para.angle_cnt - BIG_YAW_ZERO;
-    float_to_bytes(Chassis.relative_angle, &data[0]);
+    Global.Shoot.tigger_mode = bytes_to_float(&data[0]);
 }
 
-typedef void (*CanTxPack_t)(uint8_t data[8]);
-typedef struct {
-    FDCAN_HandleTypeDef *hfdcan;
-    uint16_t             id;
-    CanTxPack_t          pack;
-} CanTxEntry_t;
-
-static const CanTxEntry_t s_gimbal_tx_table[] = {
-    { &hfdcan2, CAN_ID_GIMBAL_RELATIVE_ANGLE, Pack_RelativeAngle },
-    { &hfdcan2, CAN_ID_REFEREE_DATA_1,        Pack_RefereeData1  },
-    { &hfdcan2, CAN_ID_REFEREE_DATA_2,        Pack_RefereeData2  },
-    { &hfdcan2, CAN_ID_REFEREE_DATA_3,        Pack_RefereeData3  },
+static const CanTxEntry_t GimbalTxTable[] = {
+    { CAN_ID_GIMBAL_RELATIVE_ANGLE, Pack_RelativeAngle },
+    { CAN_ID_REFEREE_DATA_1,        Pack_RefereeData1  },
+    { CAN_ID_REFEREE_DATA_2,        Pack_RefereeData2  },
+    { CAN_ID_REFEREE_DATA_3,        Pack_RefereeData3  },
 };
 
 void Gimbal_CAN_SendAll(void)
 {
     uint8_t buf[8];  // 整个发送循环共享一个 buffer，只占一次栈空间
-    for (uint8_t i = 0; i < sizeof(s_gimbal_tx_table)/sizeof(s_gimbal_tx_table[0]); i++) {
-        s_gimbal_tx_table[i].pack(buf);
-        Fdcanx_SendData(s_gimbal_tx_table[i].hfdcan, s_gimbal_tx_table[i].id, buf, 8);
+    for (uint8_t i = 0; i < sizeof(GimbalTxTable)/sizeof(GimbalTxTable[0]); i++) {
+        GimbalTxTable[i].pack(buf);
+        Fdcanx_SendData(&hfdcan2, GimbalTxTable[i].id, buf, 8);
     }
 }

@@ -177,7 +177,4 @@ void Shoot_Tasks(void)
 #endif
 }
 
-void Receive_TRIGGER_MODE(uint8_t data[8])
-{
-    Global.Shoot.tigger_mode = bytes_to_float(&data[0]);
-}
+

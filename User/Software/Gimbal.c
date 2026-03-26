@@ -2,7 +2,7 @@
  * @Author: Nas(1319621819@qq.com)
  * @Date: 2025-11-03 00:07:24
  * @LastEditors: Nas(1319621819@qq.com)
- * @LastEditTime: 2026-03-24 04:19:11
+ * @LastEditTime: 2026-03-24 19:10:53
  * @FilePath: \Season26_Regular_Sentry_Chassis\User\Software\Gimbal.c
  */
 /*
@@ -268,3 +268,8 @@ void Gimbal_SetYawAngle(float angle)
     Global.Gimbal.input.yaw = angle;
 }
 
+void Pack_RelativeAngle(uint8_t data[8])
+{
+    Chassis.relative_angle = DMMotor_GetData(BIGYAWMotor).motor_data.para.angle_cnt - BIG_YAW_ZERO;
+    float_to_bytes(Chassis.relative_angle, &data[0]);
+}

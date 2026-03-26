@@ -91,7 +91,7 @@ void Gimbal_Init();
 void Gimbal_Tasks();
 void Gimbal_SetPitchAngle(float angle);
 void Gimbal_SetYawAngle(float angle);
-
+void Pack_RelativeAngle(uint8_t data[8]);
 extern Gimbal_t Gimbal;
 #endif 
 

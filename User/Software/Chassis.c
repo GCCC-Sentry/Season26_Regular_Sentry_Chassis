@@ -2,7 +2,7 @@
  * @Author: Nas(1319621819@qq.com)
  * @Date: 2025-11-03 00:07:24
  * @LastEditors: Nas(1319621819@qq.com)
- * @LastEditTime: 2026-03-23 20:49:23
+ * @LastEditTime: 2026-03-26 16:56:11
  * @FilePath: \Season26_Regular_Sentry_Chassis\User\Software\Chassis.c
  */
 
@@ -28,6 +28,7 @@
 #include "Gimbal.h"
 #include "Global_status.h"
 #include "remote_control.h"
+#include "Shoot.h"
 
 #include "referee_system.h"
 #include "supercup.h"
@@ -140,10 +141,10 @@ void Chassis_Init()
     
     //PID初始化
     /*PID轮向电机速度环初始化*/
-    PID_Set(&Chassis.forward_FL.chassis_speed_pid_forward_FL, 220.0f, 0, 0.3, 0.0f, CHASSISMOTOR_MAX_CURRENT/2, 1500);
-    PID_Set(&Chassis.forward_FR.chassis_speed_pid_forward_FR, 220.0f, 0, 0.3, 0.0f, CHASSISMOTOR_MAX_CURRENT/2, 1500);
-    PID_Set(&Chassis.forward_BL.chassis_speed_pid_forward_BL, 220.0f, 0, 0.3, 0.0f, CHASSISMOTOR_MAX_CURRENT/2, 1500);
-    PID_Set(&Chassis.forward_BR.chassis_speed_pid_forward_BR, 220.0f, 0, 0.3, 0.0f, CHASSISMOTOR_MAX_CURRENT/2, 1500);
+    PID_Set(&Chassis.forward_FL.chassis_speed_pid_forward_FL, 20000.0f, 0, 0.3f, 0.0f, CHASSISMOTOR_MAX_CURRENT/2, 1500);
+    PID_Set(&Chassis.forward_FR.chassis_speed_pid_forward_FR, 20000.0f, 0, 0.3f, 0.0f, CHASSISMOTOR_MAX_CURRENT/2, 1500);
+    PID_Set(&Chassis.forward_BL.chassis_speed_pid_forward_BL, 20000.0f, 0, 0.3f, 0.0f, CHASSISMOTOR_MAX_CURRENT/2, 1500);
+    PID_Set(&Chassis.forward_BR.chassis_speed_pid_forward_BR, 20000.0f, 0, 0.3f, 0.0f, CHASSISMOTOR_MAX_CURRENT/2, 1500);
     /*PID舵向电机位置环初始化*/
     PID_Set(&Chassis.turn_FL.chassis_location_pid_turn_FL,8.0f, 0.0f, 0.0f, 0.0f, CHASSISMOTOR_MAX_CURRENT, 1500);
     PID_Set(&Chassis.turn_FR.chassis_location_pid_turn_FR,8.0f, 0.0f, 0.0f, 0.0f, CHASSISMOTOR_MAX_CURRENT, 1500);
@@ -662,11 +663,11 @@ void Chassis_Updater()
     Chassis.turn_FR.now = CHASSISMotor_get_data(WHEEL_TURN_FR).ecd;
     Chassis.turn_BL.now = CHASSISMotor_get_data(WHEEL_TURN_BL).ecd;
     Chassis.turn_BR.now = CHASSISMotor_get_data(WHEEL_TURN_BR).ecd;
-    //--出轴转速rpm赋值
-    Chassis.forward_FL.current_velocity_FL = CHASSISMotor_get_data(WHEEL_MOVE_FL).round_speed * Rotation_radius * PI;
-    Chassis.forward_FR.current_velocity_FR = CHASSISMotor_get_data(WHEEL_MOVE_FR).round_speed * Rotation_radius * PI;
-    Chassis.forward_BL.current_velocity_BL = CHASSISMotor_get_data(WHEEL_MOVE_BL).round_speed * Rotation_radius * PI;
-    Chassis.forward_BR.current_velocity_BR = CHASSISMotor_get_data(WHEEL_MOVE_BR).round_speed * Rotation_radius * PI;
+    //--出轴线速度 (m/s) = 出轴转速(RPM) * (π/30) * 轮子半径(m)
+    Chassis.forward_FL.current_velocity_FL = CHASSISMotor_get_data(WHEEL_MOVE_FL).round_speed * RPM_TO_RAD_S * WHEEL_RADIUS;
+    Chassis.forward_FR.current_velocity_FR = CHASSISMotor_get_data(WHEEL_MOVE_FR).round_speed * RPM_TO_RAD_S * WHEEL_RADIUS;
+    Chassis.forward_BL.current_velocity_BL = CHASSISMotor_get_data(WHEEL_MOVE_BL).round_speed * RPM_TO_RAD_S * WHEEL_RADIUS;
+    Chassis.forward_BR.current_velocity_BR = CHASSISMotor_get_data(WHEEL_MOVE_BR).round_speed * RPM_TO_RAD_S * WHEEL_RADIUS;
     //--转速RPM赋值
     
     /*---------------目标量更新----------------*/
@@ -733,11 +734,11 @@ void Chassis_Calculator(float vx,float vy,float vw)
     Chassis.forward_BL.target_velocity_BL = Chassis.forward_BL.V_BL * Chassis.forward_BL.opposite_direction_BL;
     Chassis.forward_BR.target_velocity_BR = Chassis.forward_BR.V_BR * Chassis.forward_BR.opposite_direction_BR;
 
-    // 计算马达电流
-    Chassis.forward_FL.wheel_current_FL = PID_Cal(&Chassis.forward_FL.chassis_speed_pid_forward_FL, CHASSISMotor_get_data(WHEEL_MOVE_FL).round_speed * Rotation_radius * PI, Chassis.forward_FL.target_velocity_FL);
-    Chassis.forward_FR.wheel_current_FR = PID_Cal(&Chassis.forward_FR.chassis_speed_pid_forward_FR, CHASSISMotor_get_data(WHEEL_MOVE_FR).round_speed * Rotation_radius * PI, Chassis.forward_FR.target_velocity_FR);
-    Chassis.forward_BL.wheel_current_BL = PID_Cal(&Chassis.forward_BL.chassis_speed_pid_forward_BL, CHASSISMotor_get_data(WHEEL_MOVE_BL).round_speed * Rotation_radius * PI, Chassis.forward_BL.target_velocity_BL);
-    Chassis.forward_BR.wheel_current_BR = PID_Cal(&Chassis.forward_BR.chassis_speed_pid_forward_BR, CHASSISMotor_get_data(WHEEL_MOVE_BR).round_speed * Rotation_radius * PI, Chassis.forward_BR.target_velocity_BR);
+    // 计算马达电流 (反馈和目标均为 m/s)
+    Chassis.forward_FL.wheel_current_FL = PID_Cal(&Chassis.forward_FL.chassis_speed_pid_forward_FL, Chassis.forward_FL.current_velocity_FL, Chassis.forward_FL.target_velocity_FL);
+    Chassis.forward_FR.wheel_current_FR = PID_Cal(&Chassis.forward_FR.chassis_speed_pid_forward_FR, Chassis.forward_FR.current_velocity_FR, Chassis.forward_FR.target_velocity_FR);
+    Chassis.forward_BL.wheel_current_BL = PID_Cal(&Chassis.forward_BL.chassis_speed_pid_forward_BL, Chassis.forward_BL.current_velocity_BL, Chassis.forward_BL.target_velocity_BL);
+    Chassis.forward_BR.wheel_current_BR = PID_Cal(&Chassis.forward_BR.chassis_speed_pid_forward_BR, Chassis.forward_BR.current_velocity_BR, Chassis.forward_BR.target_velocity_BR);
 
 }
 
@@ -946,23 +947,26 @@ static void Receive_Saltation_Mode(uint8_t data[8])
     Auto_data.is_scaning          = bytes_to_uint8(&data[6]);
 }
 
-extern void Receive_TRIGGER_MODE(uint8_t data[8]);
+static void Receive_Trigger_Mode(uint8_t data[8])
+{
+    Global.Shoot.tigger_mode = bytes_to_float(&data[0]);    
+}
 
-static const CanRxEntry_t s_chassis_rx_table[] = {
+static const CanRxEntry_t ChassisRxTable[] = {
     { CAN_ID_CHASSIS_SPEED_XY,     Receive_XY_Speed       },
     { CAN_ID_CHASSIS_SPEED_R_YAW,  Receive_R_Yaw          },
     { CAN_ID_CHASSIS_MODE,         Receive_Control_Mode   },
     { CAN_ID_CHASSIS_IMU_ATTITUDE, Receive_IMU_Attitude   },
     { CAN_ID_CHASSIS_IMU_GYRO,     Receive_IMU_Gyro       },
-    { CAN_ID_SHOOT_TRIGGER_MODE,   Receive_TRIGGER_MODE   },
+    { CAN_ID_SHOOT_TRIGGER_MODE,   Receive_Trigger_Mode   },
     { CAN_ID_SALTATION_MODE,       Receive_Saltation_Mode },
 };
 
 void Chassis_CAN_Dispatch(uint16_t id, uint8_t data[8])
 {
-    for (uint8_t i = 0; i < sizeof(s_chassis_rx_table)/sizeof(s_chassis_rx_table[0]); i++) {
-        if (s_chassis_rx_table[i].id == id) {
-            s_chassis_rx_table[i].handler(data);
+    for (uint8_t i = 0; i < sizeof(ChassisRxTable)/sizeof(ChassisRxTable[0]); i++) {
+        if (ChassisRxTable[i].id == id) {
+            ChassisRxTable[i].handler(data);
             return;
         }
     }

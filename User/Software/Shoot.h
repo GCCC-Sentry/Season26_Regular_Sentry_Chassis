@@ -1,7 +1,7 @@
 /*
  * @Date: 2025-10-27 21:03:17
  * @LastEditors: Nas(1319621819@qq.com)
- * @LastEditTime: 2026-03-23 21:53:33
+ * @LastEditTime: 2026-03-24 19:14:15
  * @FilePath: \Season26_Regular_Sentry_Chassis\User\Software\Shoot.h
  */
 
@@ -93,5 +93,4 @@ typedef struct
 /* 外部调用 */
 void Shoot_Init();
 void Shoot_Tasks();
-void Receive_TRIGGER_MODE(uint8_t data[8]);
 #endif 
