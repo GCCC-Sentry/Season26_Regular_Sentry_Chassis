@@ -2,7 +2,7 @@
  * @Author: Nas(1319621819@qq.com)
  * @Date: 2025-11-03 00:07:24
  * @LastEditors: Nas(1319621819@qq.com)
- * @LastEditTime: 2026-03-24 19:10:53
+ * @LastEditTime: 2026-03-28 05:42:14
  * @FilePath: \Season26_Regular_Sentry_Chassis\User\Software\Gimbal.c
  */
 /*
@@ -49,12 +49,12 @@ void Gimbal_Init()
 
     /*PID速度环初始化*/ 
     // 遥控
-    PID_Set(&Gimbal.big_yaw.big_yaw_speed_pid, 200.0f, 0.0f, 0.0f, 0.0f, GIMBALMOTOR_MAX_CURRENT, 1000);
+    PID_Set(&Gimbal.big_yaw.big_yaw_speed_pid, 0.021f, 0.0f, 0.0f, 0.0f, 10.0, 1000);
     //自瞄
     PID_Set(&Gimbal.big_yaw.big_yaw_auto_speed_pid, 200.0f, 0.0f, 0.0f, 0.0f, GIMBALMOTOR_MAX_CURRENT, 1000);
     /*PID位置环初始化*/
     // 遥控
-    PID_Set(&Gimbal.big_yaw.big_yaw_location_pid, 2.0f, 0.0f, 0.0f, 0.0f, GIMBALMOTOR_MAX_CURRENT, 100);
+    PID_Set(&Gimbal.big_yaw.big_yaw_location_pid, 6.0f, 0.0f, 1.0f, 0.0f, 500.0, 100);
     //自瞄
     PID_Set(&Gimbal.big_yaw.big_yaw_auto_location_pid, 2.0f, 0.0f, 0.0f, 0.0f, GIMBALMOTOR_MAX_CURRENT, 100);
     // 云台零点初始化
@@ -79,7 +79,7 @@ void Gimbal_Updater()
 
     /*------状态量更新------*/
     //速度
-    Gimbal.big_yaw.big_yaw_speed_now = (cos(imu.pitch / RAD_TO_DEG) * RAD_TO_DEG * imu.gyro[2] - sin(imu.pitch / RAD_TO_DEG) * RAD_TO_DEG * imu.gyro[0]);
+    Gimbal.big_yaw.big_yaw_speed_now = (cos(degree2rad(imu.pitch)) * rad2degree(imu.gyro[2]) - sin(degree2rad(imu.pitch)) * rad2degree(imu.gyro[0]));
     //位置
     Gimbal.big_yaw.big_yaw_location_now = imu.yaw_cnt; 
 
@@ -104,8 +104,11 @@ void Gimbal_Updater()
     // 此时 Global.Gimbal.input.yaw 是 CAN 原始值（未被 Navigation 覆写），offset 才正确
     if (last_chassis_mode == Navigation && Global.Chassis.mode != Navigation)
     {
-        yaw_offset = Gimbal.big_yaw.big_yaw_location_now - Global.Gimbal.input.yaw;
+        // 把云台目标强制设为当前位置，大yaw保持不动
+        Global.Gimbal.input.yaw = Gimbal.big_yaw.big_yaw_location_now;
+        yaw_offset = 0.0f;
     }
+
     // 进入 Navigation 时清除偏移量（Navigation 使用速度控制，不需要偏移）
     if (last_chassis_mode != Navigation && Global.Chassis.mode == Navigation)
     {
@@ -114,7 +117,7 @@ void Gimbal_Updater()
     last_chassis_mode = Global.Chassis.mode;
 
     /*------目标量更新------*/
-    // flag_lock==2 时泄力状态，目标位置同步到当前位置，防止PID积分饱和
+    // Global.Control.mode==2 时泄力状态，目标位置同步到当前位置，防止PID积分饱和
     if (Global.Control.mode == 2)
     {
         Gimbal.big_yaw.big_yaw_location_set = Gimbal.big_yaw.big_yaw_location_now;
@@ -206,7 +209,7 @@ void Gimbal_Controller()
         DMMotor_Set(BIGYAWMotor,
                  0,
                  0,
-                 Gimbal.big_yaw.current / 10000,
+                 Gimbal.big_yaw.current,
                  0,
                  0);
     }
