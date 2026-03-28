@@ -9,30 +9,44 @@ extern "C"
 #endif
 
     /**
-     * @brief 斜坡发生器模块
+     * @brief S形斜坡发生器模块 (S-Curve Ramp Generator)
      *
-     * 提供带加速度控制和平滑过渡的数值生成功能，支持动态参数调整和限幅保护
-     * 典型应用：电机控制、温度调节、运动控制等需要平滑过渡的场景
+     * 提供带 jerk(加加速度) 限制的平滑速度规划，实现真正的"缓加速/缓减速"。
+     * 速度曲线为 S 形而非梯形，加速度连续渐变，消除机械冲击。
+     * 
+     * 速度曲线示意:
+     *   梯形(旧): 加速度阶跃 → 机械冲击
+     *   S形(新):  加速度渐变 → 丝滑过渡
+     *
+     * 典型应用：舵轮底盘速度规划、云台平滑转动
      */
 
     typedef struct
     {
-        float current_value;            // 当前输出值（单位：用户定义单位）
-        float target_value;             // 目标值
-        unsigned int interval_ms;       // 控制间隔（单位：毫秒）
-        float accel;                    // 加速度（单位：数值/秒?）
-        float decel;                    // 减速度（单位：数值/秒?）
-        float max_limit;                // 绝对值最大值限制
-        unsigned long last_update_time; // 上次更新时间戳（毫秒）
+        /* 输出状态 */
+        float current_value;     // 当前输出值 (位置/速度，用户定义单位)
+        float current_accel;     // 当前实际加速度 (单位/s?)，由 jerk 渐变控制
+        
+        /* 目标与参数 */
+        float target_value;      // 目标值
+        float max_accel;         // 最大加速度 (单位/s?)
+        float max_decel;         // 最大减速度 (单位/s?)
+        float jerk;              // 加加速度 (单位/s?)，控制加速度变化快慢
+        float max_limit;         // 绝对值上限
+
+        /* 时间管理 */
+        unsigned int interval_ms;       // 控制间隔 (ms)，用于 dt 计算
+        unsigned long last_update_time; // 上次更新时间戳 (ms)
     } RampGenerator;
 
     /**
      * @brief 初始化斜坡发生器
-     * @param ramp 实例指针
-     * @param interval_ms 控制间隔（≥1ms）
-     * @param accel 加速度（≥0）
-     * @param decel 减速度（≥0）
-     * @param max_limit 最大绝对值限制
+     * @param ramp        实例指针
+     * @param interval_ms 控制间隔 (≥1ms)
+     * @param accel       最大加速度 (≥0, 单位/s?)
+     * @param decel       最大减速度 (≥0, 单位/s?)
+     * @param max_limit   最大绝对值限制
+     * @note  jerk 默认设为 accel * 20，可通过 RampGenerator_SetJerk 修改
      */
     void RampGenerator_Init(RampGenerator *ramp,
                             unsigned int interval_ms,
@@ -41,7 +55,7 @@ extern "C"
                             float max_limit);
 
     /**
-     * @brief 设置目标值（允许超出限制范围）
+     * @brief 设置目标值
      */
     void RampGenerator_SetTarget(RampGenerator *ramp, float target);
 
@@ -51,10 +65,10 @@ extern "C"
     float RampGenerator_GetCurrent(const RampGenerator *ramp);
 
     /**
-     * @brief 更新发生器状态（需定期调用）
-     * @param current_time_ms 单调递增的当前时间戳
+     * @brief 更新发生器状态（需定期调用，建议 1ms 周期）
+     * @note  内部使用 interval_ms 计算 dt
      */
-    void RampGenerator_Update(RampGenerator *ramp, unsigned long current_time_ms);
+    void RampGenerator_Update(RampGenerator *ramp);
 
     /**
      * @brief 修改控制间隔（立即生效）
@@ -63,16 +77,20 @@ extern "C"
     void RampGenerator_SetInterval(RampGenerator *ramp, unsigned int interval_ms);
 
     /**
-     * @brief 修改加速度（下次更新生效）
-     * @param accel 新加速度（≥0）
+     * @brief 修改最大加速度（下次更新生效）
      */
     void RampGenerator_SetAccel(RampGenerator *ramp, float accel);
 
     /**
-     * @brief 修改减速度（下次更新生效）
-     * @param decel 新减速度（≥0）
+     * @brief 修改最大减速度（下次更新生效）
      */
     void RampGenerator_SetDecel(RampGenerator *ramp, float decel);
+
+    /**
+     * @brief 修改加加速度 jerk（下次更新生效）
+     * @param jerk 加加速度 (≥0, 单位/s?)
+     */
+    void RampGenerator_SetJerk(RampGenerator *ramp, float jerk);
 
     /**
      * @brief 修改最大值限制（立即生效并钳位当前值）
@@ -80,13 +98,12 @@ extern "C"
     void RampGenerator_SetMaxLimit(RampGenerator *ramp, float max_limit);
 
     /**
-     * @brief 强制设置当前值
-     * 
+     * @brief 强制设置当前值（同时将当前加速度清零）
      */
     void RampGenerator_SetCurrent(RampGenerator *ramp, float current_value);
 
     /**
-     * @brief 重置斜坡发生器（当前值和目标值归零）
+     * @brief 重置斜坡发生器（当前值、目标值、加速度全部归零）
      */
     void RampGenerator_Reset(RampGenerator *ramp);
 
