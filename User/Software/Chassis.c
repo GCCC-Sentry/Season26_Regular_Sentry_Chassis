@@ -49,6 +49,8 @@ int Hp_Time_Wait = 0;
 uint32_t last_gimbal_msg_time;
 float X_speed, Y_speed, R_speed;
 pid_t chassis_power_pid; // 功率闭环控制pid
+static float steer_last_set[4] = {0}; // 舵向角速度前馈：记录上一次目标位置
+#define STEER_FF_GAIN 0.5f // 前馈增益系数，可根据实际效果调节 (0.0~1.0)
 /* 
 // 舵向电机速度滤波器，解决回零抖动
 static float steer_filter_buf[4] = {0};
@@ -691,16 +693,31 @@ void Chassis_Calculator(float vx,float vy,float vw)
 {
     Nearby_Transposition();
 
+    // 舵向位置环 PID
     Chassis.turn_FL.set_turn_FL_speed = PID_Cal(&Chassis.turn_FL.chassis_location_pid_turn_FL, Chassis.turn_FL.now, Chassis.turn_FL.set);
     Chassis.turn_FR.set_turn_FR_speed = PID_Cal(&Chassis.turn_FR.chassis_location_pid_turn_FR, Chassis.turn_FR.now, Chassis.turn_FR.set);
     Chassis.turn_BL.set_turn_BL_speed = PID_Cal(&Chassis.turn_BL.chassis_location_pid_turn_BL, Chassis.turn_BL.now, Chassis.turn_BL.set);
     Chassis.turn_BR.set_turn_BR_speed = PID_Cal(&Chassis.turn_BR.chassis_location_pid_turn_BR, Chassis.turn_BR.now, Chassis.turn_BR.set);
-    
-    // 舵向速度低通滤波，抑制回零抖动
-    /* Chassis.turn_FL.set_turn_FL_speed = Chassis_Steer_LPF(Chassis.turn_FL.set_turn_FL_speed, &steer_filter_buf[0], STEER_FILTER_ALPHA);
-    Chassis.turn_FR.set_turn_FR_speed = Chassis_Steer_LPF(Chassis.turn_FR.set_turn_FR_speed, &steer_filter_buf[1], STEER_FILTER_ALPHA);
-    Chassis.turn_BL.set_turn_BL_speed = Chassis_Steer_LPF(Chassis.turn_BL.set_turn_BL_speed, &steer_filter_buf[2], STEER_FILTER_ALPHA);
-    Chassis.turn_BR.set_turn_BR_speed = Chassis_Steer_LPF(Chassis.turn_BR.set_turn_BR_speed, &steer_filter_buf[3], STEER_FILTER_ALPHA); */
+
+    // 舵向角速度前馈：根据目标角变化率预判舵向运动趋势
+    // delta_ecd / dt(ms) * (1000ms/s) * (60s/min) / (8192ecd/rev) = RPM
+    // 化简: delta_ecd * (60000 / 8192) ≈ delta_ecd * 7.3242
+    {
+        float steer_sets[4] = {(float)Chassis.turn_FL.set, (float)Chassis.turn_FR.set,
+                               (float)Chassis.turn_BL.set, (float)Chassis.turn_BR.set};
+        float ff[4];
+        for (int i = 0; i < 4; i++) {
+            float delta = steer_sets[i] - steer_last_set[i];
+            // ECD/ms → RPM: delta * 60000 / 8192 (CHASSIS_TASK_TIME = 1ms)
+            ff[i] = delta * (60000.0f / 8192.0f) * STEER_FF_GAIN;
+            steer_last_set[i] = steer_sets[i];
+        }
+        // 叠加前馈到位置环输出的速度目标上
+        Chassis.turn_FL.set_turn_FL_speed += ff[0];
+        Chassis.turn_FR.set_turn_FR_speed += ff[1];
+        Chassis.turn_BL.set_turn_BL_speed += ff[2];
+        Chassis.turn_BR.set_turn_BR_speed += ff[3];
+    }
 
     // 计算和速度
     vw = vw * WHEEL_TRACK;
