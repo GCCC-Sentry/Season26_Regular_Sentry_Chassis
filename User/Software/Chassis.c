@@ -524,7 +524,10 @@ void Rudder_Angle_Calculation(float x, float y, float w)
 }
 /*----------------------------Nearby_Transposition----------------------------*/
 /**
- * @brief 就近转位
+ * @brief 就近转位 (余弦连续化版本)
+ * @note  用 cos(舵向误差角) 连续调制轮向速度，替代原先在±90°处的硬切换。
+ *        cos(0°)=1 全速 → cos(90°)=0 停转 → cos(180°)=-1 反转，自然平滑过渡。
+ *        彻底消除旋转+平移时因方向频繁翻转导致的顿挫。
  * @author Nas(1319621819@qq.com)
  */
 void Nearby_Transposition()
@@ -533,60 +536,60 @@ void Nearby_Transposition()
     Chassis.turn_FR.target_angle_turn_FR = Obtain_Modulus_Normalization(Chassis.turn_FR.set - Chassis.turn_FR.now, 8192.0f);
     Chassis.turn_BL.target_angle_turn_BL = Obtain_Modulus_Normalization(Chassis.turn_BL.set - Chassis.turn_BL.now, 8192.0f);
     Chassis.turn_BR.target_angle_turn_BR = Obtain_Modulus_Normalization(Chassis.turn_BR.set - Chassis.turn_BR.now, 8192.0f);
-    
 
-    // 根据转动角度范围决定是否需要就近转位 FL
+    // 将 ECD 误差转换为弧度，用于余弦权重计算 (8192 ECD = 2*PI)
+    float cos_FL = cosf(Chassis.turn_FL.target_angle_turn_FL * (2.0f * PI / 8192.0f));
+    float cos_FR = cosf(Chassis.turn_FR.target_angle_turn_FR * (2.0f * PI / 8192.0f));
+    float cos_BL = cosf(Chassis.turn_BL.target_angle_turn_BL * (2.0f * PI / 8192.0f));
+    float cos_BR = cosf(Chassis.turn_BR.target_angle_turn_BR * (2.0f * PI / 8192.0f));
+
+    // FL: 舵向就近转位 (选择最近侧旋转)
     if (-2048.0f <= Chassis.turn_FL.target_angle_turn_FL && Chassis.turn_FL.target_angle_turn_FL <= 2048.0f)
     {
-        // ±PI / 2之间无需反向就近转位
         Chassis.turn_FL.set = Chassis.turn_FL.target_angle_turn_FL + Chassis.turn_FL.now;
-        Chassis.forward_FL.opposite_direction_FL = 1.0f;
     }
     else
     {
-        // 需要反转扣圈情况
         Chassis.turn_FL.set = Obtain_Modulus_Normalization(Chassis.turn_FL.target_angle_turn_FL + 4096.0f, 8192.0f) + Chassis.turn_FL.now;
-        Chassis.forward_FL.opposite_direction_FL = -1.0f;
     }
-    // 根据转动角度范围决定是否需要就近转位 FR
+    // 轮向: 余弦连续调制 (default_sign = 1.0f)
+    Chassis.forward_FL.opposite_direction_FL = 1.0f * cos_FL;
+
+    // FR
     if (-2048.0f <= Chassis.turn_FR.target_angle_turn_FR && Chassis.turn_FR.target_angle_turn_FR <= 2048.0f)
     {
-        // ±PI / 2之间无需反向就近转位
         Chassis.turn_FR.set = Chassis.turn_FR.target_angle_turn_FR + Chassis.turn_FR.now;
-        Chassis.forward_FR.opposite_direction_FR = -1.0f;
     }
     else
     {
-        // 需要反转扣圈情况
         Chassis.turn_FR.set = Obtain_Modulus_Normalization(Chassis.turn_FR.target_angle_turn_FR + 4096.0f, 8192.0f) + Chassis.turn_FR.now;
-        Chassis.forward_FR.opposite_direction_FR = 1.0f;
     }
-    // 根据转动角度范围决定是否需要就近转位 BL
+    // 轮向: 余弦连续调制 (default_sign = -1.0f)
+    Chassis.forward_FR.opposite_direction_FR = -1.0f * cos_FR;
+
+    // BL
     if (-2048.0f <= Chassis.turn_BL.target_angle_turn_BL && Chassis.turn_BL.target_angle_turn_BL <= 2048.0f)
     {
-        // ±PI / 2之间无需反向就近转位
         Chassis.turn_BL.set = Chassis.turn_BL.target_angle_turn_BL + Chassis.turn_BL.now;
-        Chassis.forward_BL.opposite_direction_BL = 1.0f;
     }
     else
     {
-        // 需要反转扣圈情况
         Chassis.turn_BL.set = Obtain_Modulus_Normalization(Chassis.turn_BL.target_angle_turn_BL + 4096.0f, 8192.0f) + Chassis.turn_BL.now;
-        Chassis.forward_BL.opposite_direction_BL = -1.0f;
     }
-    // 根据转动角度范围决定是否需要就近转位 BR
+    // 轮向: 余弦连续调制 (default_sign = 1.0f)
+    Chassis.forward_BL.opposite_direction_BL = 1.0f * cos_BL;
+
+    // BR
     if (-2048.0f <= Chassis.turn_BR.target_angle_turn_BR && Chassis.turn_BR.target_angle_turn_BR <= 2048.0f)
     {
-        // ±PI / 2之间无需反向就近转位
         Chassis.turn_BR.set = Chassis.turn_BR.target_angle_turn_BR + Chassis.turn_BR.now;
-        Chassis.forward_BR.opposite_direction_BR = -1.0f;
     }
     else
     {
-        // 需要反转扣圈情况
         Chassis.turn_BR.set = Obtain_Modulus_Normalization(Chassis.turn_BR.target_angle_turn_BR + 4096.0f, 8192.0f) + Chassis.turn_BR.now;
-        Chassis.forward_BR.opposite_direction_BR = 1.0f;
     }
+    // 轮向: 余弦连续调制 (default_sign = -1.0f)
+    Chassis.forward_BR.opposite_direction_BR = -1.0f * cos_BR;
 }
 
 

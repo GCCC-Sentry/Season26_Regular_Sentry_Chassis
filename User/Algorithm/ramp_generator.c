@@ -32,7 +32,7 @@ void RampGenerator_Init(RampGenerator *ramp,
     ramp->interval_ms = (interval_ms > 0) ? interval_ms : 1;
     ramp->max_accel = fabsf(accel);
     ramp->max_decel = fabsf(decel);
-    ramp->jerk = ramp->max_accel * 20.0f;
+    ramp->jerk = ramp->max_accel * 20.0f;//请注意20是经验默认值，从 0 加速到 max_accel 需要50ms，没有物理推导
     ramp->max_limit = fabsf(max_limit);
     ramp->last_update_time = 0;
 }
@@ -79,7 +79,9 @@ void RampGenerator_Update(RampGenerator *ramp)
     float brake_dist = 0.0f;
     if (ramp->jerk > 1e-6f)
     {
-        brake_dist = (abs_accel * abs_accel) / (2.0f * ramp->jerk);
+        brake_dist = (abs_accel * abs_accel) / (2.0f * ramp->jerk);//这是前瞻制动距离
+                                                                   //——从当前加速度减到 0 的过程中，输出值还会"滑行"多远
+                                                                   //即使现在立刻开始制动，输出值还会再走这么远才停下来。
     }
 
     /* ---------- 决策期望加速度 ---------- */

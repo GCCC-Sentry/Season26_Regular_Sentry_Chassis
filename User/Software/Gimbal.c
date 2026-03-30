@@ -2,7 +2,7 @@
  * @Author: Nas(1319621819@qq.com)
  * @Date: 2025-11-03 00:07:24
  * @LastEditors: Nas(1319621819@qq.com)
- * @LastEditTime: 2026-03-28 05:42:14
+ * @LastEditTime: 2026-03-30 00:33:19
  * @FilePath: \Season26_Regular_Sentry_Chassis\User\Software\Gimbal.c
  */
 /*
@@ -54,7 +54,7 @@ void Gimbal_Init()
     PID_Set(&Gimbal.big_yaw.big_yaw_auto_speed_pid, 200.0f, 0.0f, 0.0f, 0.0f, GIMBALMOTOR_MAX_CURRENT, 1000);
     /*PID位置环初始化*/
     // 遥控
-    PID_Set(&Gimbal.big_yaw.big_yaw_location_pid, 6.0f, 0.0f, 1.0f, 0.0f, 500.0, 100);
+    PID_Set(&Gimbal.big_yaw.big_yaw_location_pid, 10.0f, 0.0f, 1.0f, 0.0f, 500.0, 100);
     //自瞄
     PID_Set(&Gimbal.big_yaw.big_yaw_auto_location_pid, 2.0f, 0.0f, 0.0f, 0.0f, GIMBALMOTOR_MAX_CURRENT, 100);
     // 云台零点初始化
@@ -105,8 +105,9 @@ void Gimbal_Updater()
     if (last_chassis_mode == Navigation && Global.Chassis.mode != Navigation)
     {
         // 把云台目标强制设为当前位置，大yaw保持不动
-        Global.Gimbal.input.yaw = Gimbal.big_yaw.big_yaw_location_now;
-        yaw_offset = 0.0f;
+        // Global.Gimbal.input.yaw = Gimbal.big_yaw.big_yaw_location_now;
+        // yaw_offset = 0.0f;
+        yaw_offset = Gimbal.big_yaw.big_yaw_location_now - Global.Gimbal.input.yaw;
     }
 
     // 进入 Navigation 时清除偏移量（Navigation 使用速度控制，不需要偏移）
