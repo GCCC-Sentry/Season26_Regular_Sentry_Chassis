@@ -2,7 +2,7 @@
  * @Author: Nas(1319621819@qq.com)
  * @Date: 2025-11-03 00:07:24
  * @LastEditors: Nas(1319621819@qq.com)
- * @LastEditTime: 2026-03-26 16:56:11
+ * @LastEditTime: 2026-04-06 10:37:34
  * @FilePath: \Season26_Regular_Sentry_Chassis\User\Software\Chassis.c
  */
 
@@ -87,7 +87,7 @@ float power_limt(float FL_current, float FR_current, float BL_current, float BR_
     cap.cache_energy = Referee_data.Buffer_Energy;
     if ((cap.remain_vol <= 12) || (Global.Cap.mode == Not_FULL))
     {
-        max_p -= 5.0f; // 2w余量
+        max_p -= 5.0f; // 5w余量
         if (cap.remain_vol <= 10)
             max_p -= 5.0f;
         if (cap.remain_vol <= 8)
@@ -702,7 +702,7 @@ void Chassis_Calculator(float vx,float vy,float vw)
     // 舵向角速度前馈：根据目标角变化率预判舵向运动趋势
     // delta_ecd / dt(ms) * (1000ms/s) * (60s/min) / (8192ecd/rev) = RPM
     // 化简: delta_ecd * (60000 / 8192) ≈ delta_ecd * 7.3242
-    {
+/*     {
         float steer_sets[4] = {(float)Chassis.turn_FL.set, (float)Chassis.turn_FR.set,
                                (float)Chassis.turn_BL.set, (float)Chassis.turn_BR.set};
         float ff[4];
@@ -717,7 +717,7 @@ void Chassis_Calculator(float vx,float vy,float vw)
         Chassis.turn_FR.set_turn_FR_speed += ff[1];
         Chassis.turn_BL.set_turn_BL_speed += ff[2];
         Chassis.turn_BR.set_turn_BR_speed += ff[3];
-    }
+    } */
 
     // 计算和速度
     vw = vw * WHEEL_TRACK;
@@ -982,12 +982,13 @@ static const CanRxEntry_t ChassisRxTable[] = {
     { CAN_ID_SALTATION_MODE,       Receive_Saltation_Mode },
 };
 
-void Chassis_CAN_Dispatch(uint16_t id, uint8_t data[8])
+uint8_t Chassis_CAN_Dispatch(uint16_t id, uint8_t data[8])
 {
     for (uint8_t i = 0; i < sizeof(ChassisRxTable)/sizeof(ChassisRxTable[0]); i++) {
         if (ChassisRxTable[i].id == id) {
             ChassisRxTable[i].handler(data);
-            return;
+            return 1;  // 匹配成功
         }
     }
+    return 0;  // 未匹配
 }

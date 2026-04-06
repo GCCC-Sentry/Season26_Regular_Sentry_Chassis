@@ -142,7 +142,8 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
     HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &rx_header, rx_data);
 
     // 底盘消息：路由表分发（新增消息只改表）
-    Chassis_CAN_Dispatch(rx_header.Identifier, rx_data);
+    if (Chassis_CAN_Dispatch(rx_header.Identifier, rx_data))
+    return;  // 双板消息处理完即退出，不再走电机解码
 
     // 接收 裁判系统数据 ( v x如果有这个ID的话，Chassis.c里有一个空的 receive_REFEREE_DATA)
     // if (rx_header.Identifier == CAN_ID_CHASSIS_POWER_LIMIT) { receive_REFEREE_DATA(rx_data); return; }

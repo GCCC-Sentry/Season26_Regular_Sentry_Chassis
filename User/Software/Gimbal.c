@@ -2,7 +2,7 @@
  * @Author: Nas(1319621819@qq.com)
  * @Date: 2025-11-03 00:07:24
  * @LastEditors: Nas(1319621819@qq.com)
- * @LastEditTime: 2026-03-30 00:33:19
+ * @LastEditTime: 2026-04-01 22:10:14
  * @FilePath: \Season26_Regular_Sentry_Chassis\User\Software\Gimbal.c
  */
 /*
@@ -51,12 +51,12 @@ void Gimbal_Init()
     // 遥控
     PID_Set(&Gimbal.big_yaw.big_yaw_speed_pid, 0.021f, 0.0f, 0.0f, 0.0f, 10.0, 1000);
     //自瞄
-    PID_Set(&Gimbal.big_yaw.big_yaw_auto_speed_pid, 200.0f, 0.0f, 0.0f, 0.0f, GIMBALMOTOR_MAX_CURRENT, 1000);
+    PID_Set(&Gimbal.big_yaw.big_yaw_auto_speed_pid, 0.021f, 0.0f, 0.0f, 0.0f, 10, 1000);
     /*PID位置环初始化*/
     // 遥控
     PID_Set(&Gimbal.big_yaw.big_yaw_location_pid, 10.0f, 0.0f, 1.0f, 0.0f, 500.0, 100);
     //自瞄
-    PID_Set(&Gimbal.big_yaw.big_yaw_auto_location_pid, 2.0f, 0.0f, 0.0f, 0.0f, GIMBALMOTOR_MAX_CURRENT, 100);
+    PID_Set(&Gimbal.big_yaw.big_yaw_auto_location_pid, 10.0f, 0.0f, 1.0f, 0.0f, 500, 100);
     // 云台零点初始化
     DMMotor_SetZero(BIG_YAW_ZERO, BIGYAWMotor); 
     }
@@ -75,7 +75,7 @@ void Gimbal_Updater()
     static int last_chassis_mode = FLOW_Chassis;
     static float yaw_offset = 0.0f;
     static float last_Global_Control_mode = 0.0f;
-    uint8_t navigation_use_location_ctrl = (Global.Chassis.mode == Navigation && Auto_data.is_scaning == 1);
+    static uint8_t last_is_scaning = 1;
 
     /*------状态量更新------*/
     //速度
@@ -84,66 +84,48 @@ void Gimbal_Updater()
     Gimbal.big_yaw.big_yaw_location_now = imu.yaw_cnt; 
 
     /*------模式切换处理------*/
-    if ((last_chassis_mode == SPIN_P || last_chassis_mode == SPIN_N) &&
-    (Global.Chassis.mode != SPIN_P && Global.Chassis.mode != SPIN_N)) 
+    // 通用规则：任何底盘模式切换 或 泄力退出 → 将目标锁定为当前位置，防止大yaw乱转
+    uint8_t mode_changed    = (last_chassis_mode != (int)Global.Chassis.mode);
+    uint8_t leaving_disable = (last_Global_Control_mode == 2 && Global.Control.mode != 2);
+    if (mode_changed || leaving_disable)
     {
-    // 记录当前偏移，避免跳变
-    // yaw_offset = Gimbal.big_yaw.big_yaw_location_now - Global.Gimbal.input.yaw;
-
-    // 重置云台目标位置为当前位置
-    Global.Gimbal.input.yaw = Gimbal.big_yaw.big_yaw_location_now;
-    }
-    // 从 Global.Control.mode==2（泄力）退出时，记录位置偏移量，防止大yaw回转
-    if (last_Global_Control_mode == 2 && Global.Control.mode != 2)
-    {
-        yaw_offset = Gimbal.big_yaw.big_yaw_location_now - Global.Gimbal.input.yaw;
+        Global.Gimbal.input.yaw = Gimbal.big_yaw.big_yaw_location_now;
+        yaw_offset = 0.0f;
     }
     last_Global_Control_mode = Global.Control.mode;
 
-    // 从 Navigation 退出到其他模式时，记录位置偏移量，防止回转
-    // 此时 Global.Gimbal.input.yaw 是 CAN 原始值（未被 Navigation 覆写），offset 才正确
-    if (last_chassis_mode == Navigation && Global.Chassis.mode != Navigation)
+    // Navigation 内部 is_scaning 切换过渡：做一次位置同步，防止速度/位置控制硬切
+    if (Global.Chassis.mode == Navigation && last_is_scaning != Auto_data.is_scaning)
     {
-        // 把云台目标强制设为当前位置，大yaw保持不动
-        // Global.Gimbal.input.yaw = Gimbal.big_yaw.big_yaw_location_now;
-        // yaw_offset = 0.0f;
-        yaw_offset = Gimbal.big_yaw.big_yaw_location_now - Global.Gimbal.input.yaw;
-    }
-
-    // 进入 Navigation 时清除偏移量（Navigation 使用速度控制，不需要偏移）
-    if (last_chassis_mode != Navigation && Global.Chassis.mode == Navigation)
-    {
+        Global.Gimbal.input.yaw = Gimbal.big_yaw.big_yaw_location_now;
         yaw_offset = 0.0f;
     }
+    last_is_scaning = Auto_data.is_scaning;
     last_chassis_mode = Global.Chassis.mode;
 
     /*------目标量更新------*/
-    // Global.Control.mode==2 时泄力状态，目标位置同步到当前位置，防止PID积分饱和
-    if (Global.Control.mode == 2)
+    if (Global.Control.mode == 2 || Global.Chassis.mode == FLOW_Chassis)
     {
+        // 泄力 或 FLOW_Chassis：目标跟随当前位置（防止PID积分饱和，电流在Calculator中清零）
         Gimbal.big_yaw.big_yaw_location_set = Gimbal.big_yaw.big_yaw_location_now;
     }
     else if (Global.Chassis.mode == Navigation && Auto_data.is_scaning == 0)
     {
-        // ===== 自瞄锁定：上板发的是编码器坐标系目标，直接转成IMU世界角 =====
-        // Global.Gimbal.input.yaw 现在 = relative_angle + encoder_relative（编码器系）
-        // 需要转换到IMU世界角：big_yaw_world = big_yaw_imu_now + (target_encoder - current_encoder)
-        float current_encoder = Chassis.relative_angle;  // 大yaw当前编码器位置
-        float target_encoder  = Global.Gimbal.input.yaw; // 上板发来的编码器坐标系目标
-        float delta_encoder   = target_encoder - current_encoder; // 还需要转过的角度
-
+        // 自瞄锁定：上板发的是编码器坐标系目标，转成IMU世界角
+        float current_encoder = Chassis.relative_angle;
+        float target_encoder  = Global.Gimbal.input.yaw;
+        float delta_encoder   = target_encoder - current_encoder;
         Gimbal.big_yaw.big_yaw_location_set = Gimbal.big_yaw.big_yaw_location_now + delta_encoder;
     }
-    else switch(Global.Chassis.mode)
+    else if (Global.Chassis.mode == Navigation)
     {
-        case Navigation :
-        /* case FLOW_Chassis :  */
-            Gimbal.big_yaw.big_yaw_location_set = Gimbal.big_yaw.big_yaw_location_now;
-            break;
-        default :
-            // 位置控制，叠加 offset 防止退出 Navigation 时回转
-            Gimbal.big_yaw.big_yaw_location_set = Global.Gimbal.input.yaw + yaw_offset;
-            break;
+        // Navigation 扫描：位置跟随当前（速度控制在Calculator中处理）
+        Gimbal.big_yaw.big_yaw_location_set = Gimbal.big_yaw.big_yaw_location_now;
+    }
+    else
+    {
+        // 其他模式（FLOW_Gimbal, SPIN等）：位置控制
+        Gimbal.big_yaw.big_yaw_location_set = Global.Gimbal.input.yaw + yaw_offset;
     }
 
 }
@@ -158,6 +140,14 @@ void Gimbal_Updater()
  */
 void Gimbal_Calculator()
 {
+    // FLOW_Chassis: 大yaw泄力，清零电流并跳过PID（防止积分饱和）
+    if (Global.Chassis.mode == FLOW_Chassis)
+    {
+        Gimbal.big_yaw.big_yaw_speed_set = 0.0f;
+        Gimbal.big_yaw.current = 0.0f;
+        return;
+    }
+
     uint8_t nav_auto_lock = (Global.Chassis.mode == Navigation && Auto_data.is_scaning == 0);
     if (nav_auto_lock)
     {
@@ -173,7 +163,7 @@ void Gimbal_Calculator()
             case Navigation :
                 // is_scaning==1：速度控制（扫描匀速旋转由上板导航速度控制）
             /* case FLOW_Chassis : */ 
-                Gimbal.big_yaw.big_yaw_speed_set = 180.0f;
+                Gimbal.big_yaw.big_yaw_speed_set = 120.0f;
                 if(Chassis.is_aligning == 1)
                 {
                     Gimbal.big_yaw.big_yaw_speed_set = Gimbal.big_yaw.planning_speed;
